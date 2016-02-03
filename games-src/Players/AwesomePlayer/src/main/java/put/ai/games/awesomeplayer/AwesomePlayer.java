@@ -13,6 +13,10 @@ import put.ai.games.game.Player;
 public class AwesomePlayer extends Player {
 
     private Random random=new Random(0xdeadbeef);
+    
+    private BoardField goalField = null;
+    
+    private BoardField myHomeField = null;
 
     @Override
     public String getName() {
@@ -21,20 +25,51 @@ public class AwesomePlayer extends Player {
 
     @Override
     public Move nextMove(Board b) {
-        BoardField goalField = getMyGoalField(b);
+        if (goalField == null){     //Some hack to unhack some hack
+            goalField = getMyGoalField(b);
+        }
+        if (myHomeField == null){
+            myHomeField = getMyHomeField(b);
+        }
+        
         BoardField bestPawn = getMyBestPawn(b, goalField);
         int currentDistance = getChebyshevDistance(bestPawn, goalField);
+        
+        BoardField bestOponent = getOponentsBestPawn(b, myHomeField);
+        int oponentDistance = getChebyshevDistance(bestOponent, myHomeField);
+        
+        boolean mustDefend = false;
+        
+        if (oponentDistance < b.getSize()/2){
+            mustDefend = true;
+        }
+        
         List<Move> moves = b.getMovesFor(getColor());
         Move bestMove = null;
+        
         int heuristicEvaluation = currentDistance;
+        int oponentEvaluation = oponentDistance;
+        
         for (Move move : moves) {
             b.doMove(move);
-            BoardField newBest = getMyBestPawn(b, goalField);
-            int newDist = getChebyshevDistance(newBest, goalField);
-            if (newDist < heuristicEvaluation){
-                heuristicEvaluation = newDist;
-                bestMove = move;
+            
+            if (mustDefend){
+                BoardField oponentNewBest = getOponentsBestPawn(b, myHomeField);
+                int newOponentDist = getChebyshevDistance(oponentNewBest, myHomeField);
+                if (newOponentDist > oponentEvaluation){
+                    oponentEvaluation = newOponentDist;
+                    bestMove = move;
+                }
             }
+            else{
+                BoardField newBest = getMyBestPawn(b, goalField);
+                int newDist = getChebyshevDistance(newBest, goalField);
+                if (newDist < heuristicEvaluation){
+                    heuristicEvaluation = newDist;
+                    bestMove = move;
+                }
+            }
+            
             b.undoMove(move);
         }
         if (bestMove == null){  //hack PM: if situation cannot be improved return radnom move. TODO: will be unhacked with implementing real algorithm
@@ -61,6 +96,24 @@ public class AwesomePlayer extends Player {
         return bestPawn;
     }
     
+    private BoardField getOponentsBestPawn(Board board, BoardField homeField){
+        int boardSize = board.getSize();
+        BoardField bestPawn = null;
+        for (int x = 0; x < boardSize; x++){
+            for (int y = 0; y < boardSize; y++){
+                Color fieldColor = board.getState(x, y);
+                if (fieldColor == getOpponent(getColor())){
+                    BoardField currentField = new BoardField(x, y);
+                    if (bestPawn == null 
+                            || getChebyshevDistance(currentField, homeField) < getChebyshevDistance(bestPawn, homeField)){
+                        bestPawn = currentField;
+                    }
+                }
+            }
+        }
+        return bestPawn;
+    }
+    
     private BoardField getMyGoalField(Board board){
         int boardSize = board.getSize();
         BoardField goalField = null;
@@ -71,6 +124,18 @@ public class AwesomePlayer extends Player {
             goalField = new BoardField(0, 0);
         }
         return goalField;
+    }
+    
+    private BoardField getMyHomeField(Board board){
+        int boardSize = board.getSize();
+        BoardField homeField = null;
+        if (board.getState(0, 0) == getColor()){
+            homeField = new BoardField(0, 0);
+        }
+        else{
+            homeField = new BoardField(boardSize-1, boardSize-1);
+        }
+        return homeField;
     }
     
     private int getChebyshevDistance(BoardField fieldA, BoardField fieldB){
