@@ -52,7 +52,7 @@ public class AwesomePlayer extends Player {
     @Override
     public Move nextMove(Board b) {
         inputBoard = b;
-        return getMoveByMaxMinStrategy(getColor(), b, 1, OPTIMIZATION_TYPE.MAX).getAction();
+        return getMoveByMaxMinStrategy(getColor(), b, 2, OPTIMIZATION_TYPE.MAX).getAction();
     }
 
     private HeuristicMove getMoveByMaxMinStrategy(Color currentPlayer, Board board,
@@ -110,9 +110,10 @@ public class AwesomePlayer extends Player {
         BoardField goal = getGoalField(currentPlayer);
 
         BoardField myBestPawn = getBestPawn(currentPlayer, board);
-        int goalDistance = getChebyshevDistance(myBestPawn, goal);
+        int goalDistance = getDistanceToWin(board, myBestPawn, goal);
+        
         BoardField opponentsBestPawn = getBestPawn(getOpponent(currentPlayer), board);
-        int oponentDistance = getChebyshevDistance(opponentsBestPawn, home);
+        int oponentDistance = getDistanceToWin(board, opponentsBestPawn, home);
 
         boolean mustDefend = oponentDistance < board.getSize() / 2;
 
@@ -127,14 +128,14 @@ public class AwesomePlayer extends Player {
 
             if (mustDefend) {
                 BoardField oponentsNewBest = getBestPawn(getOpponent(currentPlayer), board);
-                int newOponentDist = getChebyshevDistance(oponentsNewBest, home);
+                int newOponentDist = getDistanceToWin(board, oponentsNewBest, home);
                 if (newOponentDist > oponentEvaluation) {
                     oponentEvaluation = newOponentDist;
                     bestMove = move;
                 }
             } else {
                 BoardField newBest = getBestPawn(currentPlayer, board);
-                int newDist = getChebyshevDistance(newBest, goal);
+                int newDist = getDistanceToWin(board, newBest, goal);
                 if (newDist < heuristicEvaluation) {
                     heuristicEvaluation = newDist;
                     bestMove = move;
@@ -172,7 +173,7 @@ public class AwesomePlayer extends Player {
                 if (fieldColor == playerClr) {
                     BoardField currentField = new BoardField(x, y);
                     if (bestPawn == null
-                            || getChebyshevDistance(currentField, goalField) < getChebyshevDistance(bestPawn, goalField)) {
+                            || getDistanceToWin(board, currentField, goalField) < getDistanceToWin(board, bestPawn, goalField)) {
                         bestPawn = currentField;
                     }
                 }
@@ -181,10 +182,69 @@ public class AwesomePlayer extends Player {
         return bestPawn;
     }
 
-    private int getChebyshevDistance(BoardField fieldA, BoardField fieldB) {
+    private int getDistanceToWin(Board board, BoardField fieldA, BoardField fieldB) {
         int distance = Math.abs(fieldA.getX() - fieldB.getX())
                 + Math.abs(fieldA.getY() - fieldB.getY());
+        if (distance > 0 && checkFreeWay(board, fieldA, fieldB)){
+            distance = 1;
+        }
         return distance;
+    }
+    
+    private boolean checkFreeWay(Board board, BoardField fieldA, BoardField fieldB){
+        boolean isFree = false;
+        switch(checkCollinearity(fieldA, fieldB)){
+            case X:
+                if (fieldA.getY() < fieldB.getY()){
+                    for (int i = fieldA.getY() + 1; i < fieldB.getY(); i++){
+                        if (board.getState(fieldA.getX(), i) == getColor() 
+                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())){
+                            isFree = false;
+                        }
+                    }
+                }
+                else{
+                    for (int i = fieldB.getY() + 1; i < fieldA.getY(); i++){
+                        if (board.getState(fieldA.getX(), i) == getColor() 
+                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())){
+                            isFree = false;
+                        }
+                    }
+                }
+                break;
+            case Y:
+                if (fieldA.getX() < fieldB.getX()){
+                    for (int i = fieldA.getX() + 1; i < fieldB.getX(); i++){
+                        if (board.getState(fieldA.getY(), i) == getColor() 
+                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())){
+                            isFree = false;
+                        }
+                    }
+                }
+                else{
+                    for (int i = fieldB.getX() + 1; i < fieldA.getX(); i++){
+                        if (board.getState(fieldA.getY(), i) == getColor() 
+                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())){
+                            isFree = false;
+                        }
+                    }
+                }
+                break;
+            default:
+                isFree = false;
+                break;
+        }
+        return isFree;
+    }
+    
+    private COLLINEARITY checkCollinearity(BoardField fieldA, BoardField fieldB){
+        if (fieldA.getX() == fieldB.getX()){
+            return COLLINEARITY.X;
+        }
+        else if (fieldA.getY() == fieldB.getY()){
+            return COLLINEARITY.Y;
+        }
+        return COLLINEARITY.NONE;
     }
 }
 
@@ -266,4 +326,10 @@ enum OPTIMIZATION_TYPE {
 
     MAX,
     MIN
+}
+
+enum COLLINEARITY{
+    X,
+    Y,
+    NONE
 }
