@@ -57,10 +57,17 @@ public class AwesomePlayer extends Player {
 
     private HeuristicMove getMoveByMaxMinStrategy(Color currentPlayer, Board board,
             int depth, OPTIMIZATION_TYPE optDirection) {
-        if (isGameOver(board) || depth == 0) {
+        if (isGameOver(board, currentPlayer)){
+            return null;
+        }
+        if (depth == 0) {
             return getHeuristicallyBestMove(currentPlayer, board);
         }
         List<Move> moves = board.getMovesFor(currentPlayer);
+        if (moves == null){
+            return null;
+        }
+        
         HeuristicMove best;
 
         if (optDirection == OPTIMIZATION_TYPE.MAX) {
@@ -70,6 +77,11 @@ public class AwesomePlayer extends Player {
                 HeuristicMove trial = getMoveByMaxMinStrategy(
                         getOpponent(currentPlayer), board, depth - 1, OPTIMIZATION_TYPE.MIN);
                 board.undoMove(move);
+                
+                if (trial == null){
+                    return new HeuristicMove(move, board.getSize(),
+                            OPTIMIZATION_TYPE.MAX);
+                }
 
                 if (trial.isGreaterThan(best)) {
                     best = new HeuristicMove(move, trial.getEvaluation(),
@@ -83,6 +95,11 @@ public class AwesomePlayer extends Player {
                 HeuristicMove trial = getMoveByMaxMinStrategy(
                         getOpponent(currentPlayer), board, depth - 1, OPTIMIZATION_TYPE.MAX);
                 board.undoMove(move);
+                
+                 if (trial == null){
+                    return new HeuristicMove(move, 0,
+                            OPTIMIZATION_TYPE.MIN);
+                }
 
                 if (trial.isLessThan(best)) {
                     best = new HeuristicMove(move, trial.getEvaluation(),
@@ -94,9 +111,13 @@ public class AwesomePlayer extends Player {
         return best;
     }
 
-    private boolean isGameOver(Board board) {
-        return hasWon(getColor(), board)
-                || hasWon(getOpponent(getColor()), board);
+    private boolean isGameOver(Board board, Color currentPlayer) {
+        if (board.getWinner(currentPlayer) == currentPlayer){
+            return true;
+        }
+        return false;
+        /*return hasWon(getColor(), board)
+                || hasWon(getOpponent(getColor()), board);*/
     }
 
     private boolean hasWon(Color player, Board board) {
@@ -108,16 +129,27 @@ public class AwesomePlayer extends Player {
     private HeuristicMove getHeuristicallyBestMove(Color currentPlayer, Board board) {
         BoardField home = getHomeField(currentPlayer);
         BoardField goal = getGoalField(currentPlayer);
+        
+        List<Move> moves = board.getMovesFor(currentPlayer);
+        if (moves == null){
+            return null;
+        }
 
         BoardField myBestPawn = getBestPawn(currentPlayer, board);
+        if (myBestPawn == null){
+            return null;
+        }
         int goalDistance = getDistanceToWin(board, myBestPawn, goal);
         
         BoardField opponentsBestPawn = getBestPawn(getOpponent(currentPlayer), board);
+        if (opponentsBestPawn == null){
+            return null;
+        }
         int oponentDistance = getDistanceToWin(board, opponentsBestPawn, home);
 
         boolean mustDefend = oponentDistance < board.getSize() / 2;
 
-        List<Move> moves = board.getMovesFor(currentPlayer);
+        
         Move bestMove = null;
 
         int heuristicEvaluation = goalDistance;
