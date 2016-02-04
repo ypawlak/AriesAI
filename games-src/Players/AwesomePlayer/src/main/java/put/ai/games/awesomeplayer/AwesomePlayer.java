@@ -123,7 +123,18 @@ public class AwesomePlayer extends Player {
     private boolean hasWon(Color player, Board board) {
         BoardField goal = getGoalField(player);
         Color goalFieldColor = board.getState(goal.getX(), goal.getY());
-        return goalFieldColor.equals(player);
+        return goalFieldColor.equals(player) || !hasPawns(board, getOpponent(player));
+    }
+    
+    private boolean hasPawns(Board board, Color currentPlayer) {
+        int boardSize = board.getSize();
+        for (int x = 0; x < boardSize; x++) {
+            for (int y = 0; y < boardSize; y++) {
+                if( board.getState(x, y) == currentPlayer)
+                    return true;
+            }
+        }
+        return false;
     }
 
     private HeuristicMove getHeuristicallyBestMove(Color currentPlayer, Board board) {
