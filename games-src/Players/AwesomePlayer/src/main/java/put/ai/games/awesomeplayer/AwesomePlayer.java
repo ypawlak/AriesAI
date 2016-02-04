@@ -192,7 +192,7 @@ public class AwesomePlayer extends Player {
     }
     
     private boolean checkFreeWay(Board board, BoardField fieldA, BoardField fieldB){
-        boolean isFree = false;
+        boolean isFree = true;
         switch(checkCollinearity(fieldA, fieldB)){
             case X:
                 if (fieldA.getY() < fieldB.getY()){
