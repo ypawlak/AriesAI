@@ -287,10 +287,10 @@ public class AwesomePlayer extends Player {
     		}
     	}
     	else{
-    		//if ((b.getState(bf.getX()+1, bf.getY()) == getOpponent(c) && b.getState(bf.getX()-1, bf.getY()) == getOpponent(c))
-    		//		|| (b.getState(bf.getX(), bf.getY()+1) == getOpponent(c) && b.getState(bf.getX(), bf.getY()-1) == getOpponent(c))){
-    		//	return true;
-    		//}
+    		if ((getNeighbour(b, bf, DIRECTION.UP) == getOpponent(c) && getNeighbour(b, bf, DIRECTION.DOWN) == getOpponent(c))
+    				|| (getNeighbour(b, bf, DIRECTION.RIGHT) == getOpponent(c) && getNeighbour(b, bf, DIRECTION.LEFT) == getOpponent(c))){
+    			return true;
+    		}
     	}
     	return false;
     }
@@ -301,6 +301,40 @@ public class AwesomePlayer extends Player {
     		return true;
     	}
     	return false;
+    }
+    
+    private Color getNeighbour(Board b, BoardField bf, DIRECTION dir){
+        switch (dir){
+            case UP:
+                for (int i = bf.getY()-1; i >= 0; i--){
+                    if (b.getState(bf.getX(), i) != Color.EMPTY){
+                        return b.getState(bf.getX(), i);
+                    }
+                }
+                break;
+            case DOWN:
+                for (int i = bf.getY()+1; i < b.getSize(); i++){
+                    if (b.getState(bf.getX(), i) != Color.EMPTY){
+                        return b.getState(bf.getX(), i);
+                    }
+                }
+                break;
+            case RIGHT:
+                for (int i = bf.getX()+1; i < b.getSize(); i++){
+                    if (b.getState(i, bf.getY()) != Color.EMPTY){
+                        return b.getState(i, bf.getY());
+                    }
+                }
+                break;
+            case LEFT:
+                for (int i = bf.getX()-1; i >= 0; i--){
+                    if (b.getState(i, bf.getY()) != Color.EMPTY){
+                        return b.getState(i, bf.getY());
+                    }
+                }
+                break;
+        }
+        return Color.EMPTY;
     }
 }
 
@@ -389,6 +423,13 @@ enum COLLINEARITY {
     X,
     Y,
     NONE
+}
+
+enum DIRECTION{
+    UP,
+    DOWN,
+    RIGHT,
+    LEFT
 }
 
 class VictoryException extends Exception {
