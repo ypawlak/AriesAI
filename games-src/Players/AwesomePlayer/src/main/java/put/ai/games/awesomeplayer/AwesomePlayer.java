@@ -69,7 +69,7 @@ public class AwesomePlayer extends Player {
             //szukamy najlepszej
 
             //najsłabsza możliwa ocena heurystyczna
-            bestMove = new HeuristicMove(null, 0, OPTIMIZATION_TYPE.MAX);
+            bestMove = new HeuristicMove(null, -1, OPTIMIZATION_TYPE.MAX);
             for (Move move : moves) {
                 HeuristicMove trial;
                 board.doMove(move);
@@ -96,7 +96,7 @@ public class AwesomePlayer extends Player {
             //szukamy najgorszej
 
             //najlepsza ocena heurystyczna
-            bestMove = new HeuristicMove(null, 0, OPTIMIZATION_TYPE.MIN);
+            bestMove = new HeuristicMove(null, -1, OPTIMIZATION_TYPE.MIN);
             for (Move move : moves) {
                 HeuristicMove trial;
                 board.doMove(move);
