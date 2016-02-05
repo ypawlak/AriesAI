@@ -34,7 +34,7 @@ public class AwesomePlayer extends Player {
         }
         return homeFields.get(opponentClr);
     }
-    
+
     private BoardField findHomeField(Color playerClr) {
         int boardSize = inputBoard.getSize();
         if (inputBoard.getState(0, 0) == playerClr) {
@@ -57,110 +57,99 @@ public class AwesomePlayer extends Player {
 
     private HeuristicMove getMoveByMaxMinStrategy(Color currentPlayer, Board board,
             int depth, OPTIMIZATION_TYPE optDirection) {
-        if (isGameOver(board, currentPlayer)){
-            return null;
-        }
+
         if (depth == 0) {
             return getHeuristicallyBestMove(currentPlayer, board);
         }
+
         List<Move> moves = board.getMovesFor(currentPlayer);
-        if (moves == null){
-            return null;
-        }
-        
-        HeuristicMove best;
+        HeuristicMove bestMove;
 
         if (optDirection == OPTIMIZATION_TYPE.MAX) {
-            best = new HeuristicMove(null, 0, OPTIMIZATION_TYPE.MAX);
+            //szukamy najlepszej
+
+            //najsłabsza możliwa ocena heurystyczna
+            bestMove = new HeuristicMove(null, 0, OPTIMIZATION_TYPE.MAX);
             for (Move move : moves) {
+                HeuristicMove trial;
                 board.doMove(move);
-                HeuristicMove trial = getMoveByMaxMinStrategy(
-                        getOpponent(currentPlayer), board, depth - 1, OPTIMIZATION_TYPE.MIN);
-                board.undoMove(move);
-                
-                if (trial == null){
-                    return new HeuristicMove(move, board.getSize(),
-                            OPTIMIZATION_TYPE.MAX);
+                try {
+                    checkGameOver(currentPlayer, board);
+                    trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
+                            board, depth - 1, OPTIMIZATION_TYPE.MIN);
+                } catch (VictoryException ex) {
+                    //najlepsza możliwa ocena heurystyczna, możemy skończyć szukanie
+                    return new HeuristicMove(move, 0, OPTIMIZATION_TYPE.MIN);
+                } catch (DefeatException ex) {
+                    //najsłabsza możliwa ocena heurystyczna, chcemy lepiej
+                    trial = new HeuristicMove(move, 0, OPTIMIZATION_TYPE.MAX);
+                } finally {
+                    board.undoMove(move);
                 }
 
-                if (trial.isGreaterThan(best)) {
-                    best = new HeuristicMove(move, trial.getEvaluation(),
+                if (trial.isGreaterThan(bestMove)) {
+                    bestMove = new HeuristicMove(move, trial.getEvaluation(),
                             trial.getEvaluationDirection());
                 }
             }
         } else {
-            best = new HeuristicMove(null, board.getSize(), OPTIMIZATION_TYPE.MIN);
+            //szukamy najgorszej
+
+            //najlepsza ocena heurystyczna
+            bestMove = new HeuristicMove(null, 0, OPTIMIZATION_TYPE.MIN);
             for (Move move : moves) {
+                HeuristicMove trial;
                 board.doMove(move);
-                HeuristicMove trial = getMoveByMaxMinStrategy(
-                        getOpponent(currentPlayer), board, depth - 1, OPTIMIZATION_TYPE.MAX);
-                board.undoMove(move);
-                
-                 if (trial == null){
-                    return new HeuristicMove(move, 0,
-                            OPTIMIZATION_TYPE.MIN);
+                try {
+                    checkGameOver(currentPlayer, board);
+                    trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
+                            board, depth - 1, OPTIMIZATION_TYPE.MAX);
+                } catch (VictoryException ex) {
+                    //najgorsza ocena heurystyczna, możemy skończyć szukanie
+                    return new HeuristicMove(move, 0, OPTIMIZATION_TYPE.MAX);
+                } catch (DefeatException ex) {
+                    //najlepsza ocena heurystyczna, chcemy lepiej
+                    trial = new HeuristicMove(move, 0, OPTIMIZATION_TYPE.MIN);
+                } finally {
+                    board.undoMove(move);
                 }
 
-                if (trial.isLessThan(best)) {
-                    best = new HeuristicMove(move, trial.getEvaluation(),
+                if (trial.isLessThan(bestMove)) {
+                    bestMove = new HeuristicMove(move, trial.getEvaluation(),
                             trial.getEvaluationDirection());
                 }
             }
         }
-
-        return best;
+        
+        return bestMove;
     }
 
-    private boolean isGameOver(Board board, Color currentPlayer) {
-        if (board.getWinner(currentPlayer) == currentPlayer){
-            return true;
+    private void checkGameOver(Color currentPlayer, Board board) throws VictoryException, DefeatException {
+        if (board.getWinner(currentPlayer) == currentPlayer) {
+            throw new VictoryException();
         }
-        return false;
-        /*return hasWon(getColor(), board)
-                || hasWon(getOpponent(getColor()), board);*/
-    }
-
-    private boolean hasWon(Color player, Board board) {
-        BoardField goal = getGoalField(player);
-        Color goalFieldColor = board.getState(goal.getX(), goal.getY());
-        return goalFieldColor.equals(player) || !hasPawns(board, getOpponent(player));
-    }
-    
-    private boolean hasPawns(Board board, Color currentPlayer) {
-        int boardSize = board.getSize();
-        for (int x = 0; x < boardSize; x++) {
-            for (int y = 0; y < boardSize; y++) {
-                if( board.getState(x, y) == currentPlayer)
-                    return true;
-            }
+        Color oponent = getOpponent(currentPlayer);
+        if (board.getWinner(oponent) == oponent) {
+            throw new DefeatException();
         }
-        return false;
     }
 
     private HeuristicMove getHeuristicallyBestMove(Color currentPlayer, Board board) {
         BoardField home = getHomeField(currentPlayer);
         BoardField goal = getGoalField(currentPlayer);
-        
+
         List<Move> moves = board.getMovesFor(currentPlayer);
-        if (moves == null){
-            return null;
-        }
 
         BoardField myBestPawn = getBestPawn(currentPlayer, board);
-        if (myBestPawn == null){
-            return null;
-        }
+
         int goalDistance = getDistanceToWin(board, myBestPawn, goal);
-        
+
         BoardField opponentsBestPawn = getBestPawn(getOpponent(currentPlayer), board);
-        if (opponentsBestPawn == null){
-            return null;
-        }
+
         int oponentDistance = getDistanceToWin(board, opponentsBestPawn, home);
 
         boolean mustDefend = oponentDistance < board.getSize() / 2;
 
-        
         Move bestMove = null;
 
         int heuristicEvaluation = goalDistance;
@@ -228,46 +217,44 @@ public class AwesomePlayer extends Player {
     private int getDistanceToWin(Board board, BoardField fieldA, BoardField fieldB) {
         int distance = Math.abs(fieldA.getX() - fieldB.getX())
                 + Math.abs(fieldA.getY() - fieldB.getY());
-        if (distance > 0 && checkFreeWay(board, fieldA, fieldB)){
+        if (distance > 0 && checkFreeWay(board, fieldA, fieldB)) {
             distance = 1;
         }
         return distance;
     }
-    
-    private boolean checkFreeWay(Board board, BoardField fieldA, BoardField fieldB){
+
+    private boolean checkFreeWay(Board board, BoardField fieldA, BoardField fieldB) {
         boolean isFree = true;
-        switch(checkCollinearity(fieldA, fieldB)){
+        switch (checkCollinearity(fieldA, fieldB)) {
             case X:
-                if (fieldA.getY() < fieldB.getY()){
-                    for (int i = fieldA.getY() + 1; i < fieldB.getY(); i++){
-                        if (board.getState(fieldA.getX(), i) == getColor() 
-                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())){
+                if (fieldA.getY() < fieldB.getY()) {
+                    for (int i = fieldA.getY() + 1; i < fieldB.getY(); i++) {
+                        if (board.getState(fieldA.getX(), i) == getColor()
+                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())) {
                             isFree = false;
                         }
                     }
-                }
-                else{
-                    for (int i = fieldB.getY() + 1; i < fieldA.getY(); i++){
-                        if (board.getState(fieldA.getX(), i) == getColor() 
-                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())){
+                } else {
+                    for (int i = fieldB.getY() + 1; i < fieldA.getY(); i++) {
+                        if (board.getState(fieldA.getX(), i) == getColor()
+                                || board.getState(fieldA.getX(), i) == getOpponent(getColor())) {
                             isFree = false;
                         }
                     }
                 }
                 break;
             case Y:
-                if (fieldA.getX() < fieldB.getX()){
-                    for (int i = fieldA.getX() + 1; i < fieldB.getX(); i++){
-                        if (board.getState(fieldA.getY(), i) == getColor() 
-                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())){
+                if (fieldA.getX() < fieldB.getX()) {
+                    for (int i = fieldA.getX() + 1; i < fieldB.getX(); i++) {
+                        if (board.getState(fieldA.getY(), i) == getColor()
+                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())) {
                             isFree = false;
                         }
                     }
-                }
-                else{
-                    for (int i = fieldB.getX() + 1; i < fieldA.getX(); i++){
-                        if (board.getState(fieldA.getY(), i) == getColor() 
-                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())){
+                } else {
+                    for (int i = fieldB.getX() + 1; i < fieldA.getX(); i++) {
+                        if (board.getState(fieldA.getY(), i) == getColor()
+                                || board.getState(i, fieldA.getY()) == getOpponent(getColor())) {
                             isFree = false;
                         }
                     }
@@ -279,12 +266,11 @@ public class AwesomePlayer extends Player {
         }
         return isFree;
     }
-    
-    private COLLINEARITY checkCollinearity(BoardField fieldA, BoardField fieldB){
-        if (fieldA.getX() == fieldB.getX()){
+
+    private COLLINEARITY checkCollinearity(BoardField fieldA, BoardField fieldB) {
+        if (fieldA.getX() == fieldB.getX()) {
             return COLLINEARITY.X;
-        }
-        else if (fieldA.getY() == fieldB.getY()){
+        } else if (fieldA.getY() == fieldB.getY()) {
             return COLLINEARITY.Y;
         }
         return COLLINEARITY.NONE;
@@ -338,7 +324,7 @@ class HeuristicMove implements Comparable<HeuristicMove> {
                     : evaluation - o.evaluation;
         }
 
-        //HACK JP założone apriori - jeśli nie musimy się bronić jesteśmy lepsi niż jeśli musimy
+        //HACK JP założenie apriori - jeśli nie musimy się bronić jesteśmy lepsi niż jeśli musimy
         return evaluationDirection == OPTIMIZATION_TYPE.MIN
                 ? 1
                 : -1;
@@ -371,8 +357,17 @@ enum OPTIMIZATION_TYPE {
     MIN
 }
 
-enum COLLINEARITY{
+enum COLLINEARITY {
+
     X,
     Y,
     NONE
+}
+
+class VictoryException extends Exception {
+
+}
+
+class DefeatException extends Exception {
+
 }
