@@ -168,7 +168,8 @@ public class AwesomePlayer extends Player {
             } else {
                 BoardField newBest = getBestPawn(currentPlayer, board);
                 int newDist = getDistanceToWin(board, newBest, goal);
-                if (newDist < heuristicEvaluation) {
+                if (!canBeDestroyed(board, newBest, currentPlayer) 
+                        && newDist < heuristicEvaluation) {
                     heuristicEvaluation = newDist;
                     bestMove = move;
                 }
@@ -274,6 +275,32 @@ public class AwesomePlayer extends Player {
             return COLLINEARITY.Y;
         }
         return COLLINEARITY.NONE;
+    }
+    
+    private boolean canBeDestroyed(Board b, BoardField bf, Color c){
+    	if (isOnEdge(b, bf)){
+    		for (int i = 0; i < b.getSize(); i++){
+    			if (b.getState(bf.getX(), i) == getOpponent(c)
+    					|| b.getState(i, bf.getY()) == getOpponent(c)){
+    				return true;
+    			}
+    		}
+    	}
+    	else{
+    		//if ((b.getState(bf.getX()+1, bf.getY()) == getOpponent(c) && b.getState(bf.getX()-1, bf.getY()) == getOpponent(c))
+    		//		|| (b.getState(bf.getX(), bf.getY()+1) == getOpponent(c) && b.getState(bf.getX(), bf.getY()-1) == getOpponent(c))){
+    		//	return true;
+    		//}
+    	}
+    	return false;
+    }
+    
+    private boolean isOnEdge(Board b, BoardField bf) {
+    	if(bf.getX() == 0 || bf.getX() == b.getSize()-1
+    			|| bf.getY() == 0 || bf.getY() == b.getSize()-1){
+    		return true;
+    	}
+    	return false;
     }
 }
 
