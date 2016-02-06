@@ -4,9 +4,7 @@
  */
 package put.ai.games.pawncounter;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import put.ai.games.game.Board;
 import put.ai.games.game.Move;
@@ -20,21 +18,21 @@ public class PawnCounter extends Player {
 
     private Integer worstHeuristicEval;
     private Integer bestHeuristicEval;
-    
+
     private int getWorstHeuristicEval(Board board) {
         if (worstHeuristicEval == null) {
             int boardSize = board.getSize();
-            int pawnRowCount = boardSize/2;
-            worstHeuristicEval = pawnRowCount*pawnRowCount*(-1);
+            int pawnRowCount = boardSize / 2;
+            worstHeuristicEval = pawnRowCount * pawnRowCount * (-1);
         }
         return worstHeuristicEval;
     }
-    
+
     private int getBestHeuristicEval(Board board) {
         if (bestHeuristicEval == null) {
             int boardSize = board.getSize();
-            int pawnRowCount = boardSize/2;
-            bestHeuristicEval = pawnRowCount*pawnRowCount;
+            int pawnRowCount = boardSize / 2;
+            bestHeuristicEval = pawnRowCount * pawnRowCount;
         }
         return bestHeuristicEval;
     }
@@ -47,12 +45,12 @@ public class PawnCounter extends Player {
     @Override
     public Move nextMove(Board b) {
         inputBoard = b;
-        return getMoveByMaxMinStrategy(getColor(), b, 3, OPTIMIZATION_TYPE.MAX).getAction();
+        return getMoveByMaxMinStrategy(getColor(), b, 2, OPTIMIZATION_TYPE.MAX).getAction();
     }
 
     private HeuristicMove getMoveByMaxMinStrategy(Color currentPlayer, Board board,
             int depth, OPTIMIZATION_TYPE optDirection) {
-        
+
         if (depth == 0) {
             int heuristicVal = getPawnsCount(board);
             return new HeuristicMove(null, heuristicVal);
@@ -62,22 +60,25 @@ public class PawnCounter extends Player {
         HeuristicMove bestMove;
 
         if (optDirection == OPTIMIZATION_TYPE.MAX) {
-            bestMove = new HeuristicMove(null, getWorstHeuristicEval(board)-1);
+            bestMove = new HeuristicMove(null, getWorstHeuristicEval(board) - 1);
             for (Move move : moves) {
-                HeuristicMove trial;
+                HeuristicMove trial = null;
                 board.doMove(move);
-                try {
-                    checkGameOver(currentPlayer, board);
-                    trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
-                            board, depth - 1, OPTIMIZATION_TYPE.MIN);
-                } catch (VictoryException ex) {
-                    return new HeuristicMove(move, getBestHeuristicEval(board));
-                } catch (DefeatException ex) {
-                    trial = new HeuristicMove(move, getWorstHeuristicEval(board));
-                } finally {
-                    board.undoMove(move);
+
+                switch (checkGameOver(currentPlayer, board)) {
+                    case WON:
+                        board.undoMove(move);
+                        return new HeuristicMove(move, getBestHeuristicEval(board));
+                    case LOST:
+                        trial = new HeuristicMove(move, getWorstHeuristicEval(board));
+                        break;
+                    case UNSETTLED:
+                        trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
+                                board, depth - 1, OPTIMIZATION_TYPE.MIN);
+
                 }
 
+                board.undoMove(move);
                 if (trial.getEvaluation() > bestMove.getEvaluation()) {
                     bestMove = new HeuristicMove(move, trial.getEvaluation());
                 }
@@ -85,39 +86,45 @@ public class PawnCounter extends Player {
         } else {
             bestMove = new HeuristicMove(null, getBestHeuristicEval(board) + 1);
             for (Move move : moves) {
-                HeuristicMove trial;
+                HeuristicMove trial = null;
                 board.doMove(move);
-                try {
-                    checkGameOver(currentPlayer, board);
-                    trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
-                            board, depth - 1, OPTIMIZATION_TYPE.MAX);
-                } catch (VictoryException ex) {
-                    return new HeuristicMove(move, getWorstHeuristicEval(board));
-                } catch (DefeatException ex) {
-                    trial = new HeuristicMove(move, getBestHeuristicEval(board));
-                } finally {
-                    board.undoMove(move);
+                
+                switch (checkGameOver(currentPlayer, board)) {
+                    case WON:
+                        board.undoMove(move);
+                        return new HeuristicMove(move, getWorstHeuristicEval(board));
+                    case LOST:
+                        trial = new HeuristicMove(move, getBestHeuristicEval(board));
+                        break;
+                    case UNSETTLED:
+                        trial = getMoveByMaxMinStrategy(getOpponent(currentPlayer),
+                                board, depth - 1, OPTIMIZATION_TYPE.MIN);
+
                 }
+                
+                board.undoMove(move);
 
                 if (trial.getEvaluation() < bestMove.getEvaluation()) {
                     bestMove = new HeuristicMove(move, trial.getEvaluation());
                 }
             }
         }
-        
+
         return bestMove;
     }
 
-    private void checkGameOver(Color currentPlayer, Board board) throws VictoryException, DefeatException {
+    private GAME_RESULT checkGameOver(Color currentPlayer, Board board) {
         if (board.getWinner(currentPlayer) == currentPlayer) {
-            throw new VictoryException();
+            return GAME_RESULT.WON;
         }
         Color oponent = getOpponent(currentPlayer);
         if (board.getWinner(oponent) == oponent) {
-            throw new DefeatException();
+            return GAME_RESULT.LOST;
         }
+
+        return GAME_RESULT.UNSETTLED;
     }
-    
+
     private int getPawnsCount(Board board) {
         int boardSize = board.getSize();
         int count = 0;
@@ -133,8 +140,9 @@ public class PawnCounter extends Player {
         }
         return count;
     }
-    
+
 }
+
 class BoardField {
 
     private int x;
@@ -171,7 +179,7 @@ class HeuristicMove {
         this.action = action;
         this.evaluation = eval;
     }
-    
+
     public Move getAction() {
         return action;
     }
@@ -187,10 +195,9 @@ enum OPTIMIZATION_TYPE {
     MIN
 }
 
-class VictoryException extends Exception {
+enum GAME_RESULT {
 
-}
-
-class DefeatException extends Exception {
-
+    WON,
+    LOST,
+    UNSETTLED
 }
