@@ -16,5 +16,6 @@
         <module>NastyPlayer</module>
         <module>NullPlayer</module>
         <module>AwesomePlayer</module>
+        <module>PawnCounter</module>
     </modules>
 </project>
