@@ -348,7 +348,7 @@ public class AwesomePlayer extends Player {
         for (int i = 0; i < b.getSize(); i++){
                 for (int j = 0; j < b.getSize(); j++){
                     if (b.getState(i, j) == getColor()){
-                        if (canBeDestroyed(b, new BoardField(i, j), getColor())){
+                        if (canBeDestroyed(b, new BoardField(i, j), c)){
                             inDanger = true;
                             break;
                         }
