@@ -153,6 +153,9 @@ public class AwesomePlayer extends Player {
         Move bestMove = null;
 
         int heuristicEvaluation = goalDistance;
+        if (checkDanger(board, currentPlayer)){
+            heuristicEvaluation += board.getSize();
+        }
         int oponentEvaluation = oponentDistance;
 
         for (Move move : moves) {
@@ -168,8 +171,11 @@ public class AwesomePlayer extends Player {
             } else {
                 BoardField newBest = getBestPawn(currentPlayer, board);
                 int newDist = getDistanceToWin(board, newBest, goal);
-                if (!canBeDestroyed(board, newBest, currentPlayer) 
-                        && newDist < heuristicEvaluation) {
+                boolean inDanger = checkDanger(board, currentPlayer);
+                if (inDanger){
+                    newDist += board.getSize();
+                }
+                if (newDist < heuristicEvaluation) {
                     heuristicEvaluation = newDist;
                     bestMove = move;
                 }
@@ -335,6 +341,21 @@ public class AwesomePlayer extends Player {
                 break;
         }
         return Color.EMPTY;
+    }
+    
+    private boolean checkDanger(Board b, Color c){
+        boolean inDanger = false;
+        for (int i = 0; i < b.getSize(); i++){
+                for (int j = 0; j < b.getSize(); j++){
+                    if (b.getState(i, j) == getColor()){
+                        if (canBeDestroyed(b, new BoardField(i, j), getColor())){
+                            inDanger = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        return inDanger;
     }
 }
 
